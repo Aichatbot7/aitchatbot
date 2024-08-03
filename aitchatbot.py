@@ -47,10 +47,12 @@ def get_llama_response(prompt):
         "Content-Type": "application/json",
     }
     data = {"inputs": prompt}
-    response = requests.post(huggingface_model_endpoint, headers=headers, json=data)
-    if response.status_code == 200:
+    try:
+        response = requests.post(huggingface_model_endpoint, headers=headers, json=data)
+        response.raise_for_status()  # Will raise an HTTPError for bad responses
         return response.json()[0]["generated_text"]
-    return "Error fetching response from LLaMA model."
+    except requests.exceptions.RequestException as e:
+        return f"Request failed: {e}"
 
 # Streamlit app
 st.title("Advanced Chatbot")
