@@ -1,7 +1,7 @@
 import streamlit as st
 import requests
 
-# Fetch secrets
+# Fetch secrets from .streamlit/secrets.toml
 nasa_api_key = st.secrets.get("nasa", {}).get("api_key", "")
 currents_api_key = st.secrets.get("currentsapi", {}).get("api_key", "")
 huggingface_api_key = st.secrets.get("huggingface", {}).get("api_key", "")
@@ -15,7 +15,7 @@ def get_space_info(api_key):
     response = requests.get(url)
     if response.status_code == 200:
         data = response.json()
-        return data[0]['title'] + ": " + data[0]['explanation']
+        return f"{data[0]['title']}: {data[0]['explanation']}"
     return "No space information available."
 
 # Currents API for news
@@ -27,7 +27,7 @@ def get_latest_news(api_key, query):
     if response.status_code == 200:
         news_data = response.json().get('news', [])
         if news_data:
-            return news_data[0]['title'] + ": " + news_data[0]['description']
+            return f"{news_data[0]['title']}: {news_data[0]['description']}"
     return "No news available on this topic."
 
 # arXiv API for latest research
@@ -50,7 +50,11 @@ def get_llama_response(prompt):
     try:
         response = requests.post(huggingface_model_endpoint, headers=headers, json=data)
         response.raise_for_status()  # Will raise an HTTPError for bad responses
-        return response.json()[0]["generated_text"]
+        response_data = response.json()
+        # Assuming the response format includes "generated_text"
+        if isinstance(response_data, list) and "generated_text" in response_data[0]:
+            return response_data[0]["generated_text"]
+        return "Unexpected response format."
     except requests.exceptions.RequestException as e:
         return f"Request failed: {e}"
 
@@ -64,7 +68,7 @@ if st.button("Get Response"):
         # Fetch relevant information based on the user query
         if "space" in user_input.lower():
             info = get_space_info(nasa_api_key)
-        elif "ai" in user_input.lower() or "agi" in user_input.lower() or "asi" in user_input.lower():
+        elif any(keyword in user_input.lower() for keyword in ["ai", "agi", "asi"]):
             info = get_latest_news(currents_api_key, "AI")
         elif "research" in user_input.lower():
             info = get_latest_research("AI")
@@ -72,7 +76,7 @@ if st.button("Get Response"):
             info = "Sorry, I couldn't find information on that topic."
 
         # Generate a detailed response using the hosted LLaMA model
-        prompt = user_input + " " + str(info)
+        prompt = f"{user_input} {info}"
         response = get_llama_response(prompt)
 
         st.write(response)
