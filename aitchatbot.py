@@ -10,7 +10,7 @@ def get_api_key(service_name):
         return None
 
 nasa_api_key = get_api_key("nasa")
-news_api_key = get_api_key("newsapi")
+currents_api_key = get_api_key("currentsapi")
 huggingface_api_key = get_api_key("huggingface")
 huggingface_model_endpoint = "https://api-inference.huggingface.co/models/meta-llama/Meta-Llama-3-8B"
 
@@ -25,11 +25,11 @@ def get_space_info(api_key):
         return f"{data[0]['title']}: {data[0]['explanation']}"
     return "No space information available."
 
-# News API for latest research
-def get_latest_research(api_key):
+# Currents API for latest news
+def get_latest_news(api_key, query):
     if not api_key:
-        return "News API key is missing."
-    url = f"https://api.currentsapi.services/v1/search?apiKey={api_key}&keywords=AI"
+        return "Currents API key is missing."
+    url = f"https://api.currentsapi.services/v1/search?apiKey={api_key}&keywords={query}"
     response = requests.get(url)
     if response.status_code == 200:
         news_data = response.json().get('news', [])
@@ -66,9 +66,9 @@ if st.button("Get Response"):
         if "space" in user_input.lower():
             info = get_space_info(nasa_api_key)
         elif any(keyword in user_input.lower() for keyword in ["ai", "agi", "asi"]):
-            info = get_latest_research(news_api_key)
+            info = get_latest_news(currents_api_key, "AI")
         elif "research" in user_input.lower():
-            info = get_latest_research(news_api_key)
+            info = get_latest_news(currents_api_key, "AI")
         else:
             info = "Sorry, I couldn't find information on that topic."
 
