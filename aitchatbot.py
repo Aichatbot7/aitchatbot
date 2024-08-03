@@ -51,9 +51,10 @@ def get_llama_response(prompt):
         response = requests.post(huggingface_model_endpoint, headers=headers, json=data)
         response.raise_for_status()  # Will raise an HTTPError for bad responses
         response_data = response.json()
-        # Assuming the response format includes "generated_text"
-        if isinstance(response_data, list) and len(response_data) > 0 and "generated_text" in response_data[0]:
-            return response_data[0]["generated_text"]
+        # Handle model output
+        if isinstance(response_data, list) and len(response_data) > 0:
+            generated_text = response_data[0].get("generated_text", "No text generated.")
+            return generated_text
         return "Unexpected response format."
     except requests.exceptions.RequestException as e:
         return f"Request failed: {e}"
