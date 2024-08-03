@@ -1,10 +1,17 @@
 import streamlit as st
 import requests
 
-# Fetch secrets from .streamlit/secrets.toml
-nasa_api_key = st.secrets.get("nasa", {}).get("api_key", "")
-currents_api_key = st.secrets.get("currentsapi", {}).get("api_key", "")
-huggingface_api_key = st.secrets.get("huggingface", {}).get("api_key", "")
+# Function to read API keys safely
+def get_api_key(service_name):
+    try:
+        return st.secrets[service_name]["api_key"]
+    except KeyError:
+        st.error(f"API key for {service_name} not found in secrets.")
+        return None
+
+nasa_api_key = get_api_key("nasa")
+news_api_key = get_api_key("newsapi")
+huggingface_api_key = get_api_key("huggingface")
 huggingface_model_endpoint = "https://api-inference.huggingface.co/models/meta-llama/Meta-Llama-3-8B"
 
 # NASA API for space information
@@ -18,11 +25,11 @@ def get_space_info(api_key):
         return f"{data[0]['title']}: {data[0]['explanation']}"
     return "No space information available."
 
-# Currents API for news
-def get_latest_news(api_key, query):
+# News API for latest research
+def get_latest_research(api_key):
     if not api_key:
-        return "Currents API key is missing."
-    url = f"https://api.currentsapi.services/v1/search?apiKey={api_key}&keywords={query}"
+        return "News API key is missing."
+    url = f"https://api.currentsapi.services/v1/search?apiKey={api_key}&keywords=AI"
     response = requests.get(url)
     if response.status_code == 200:
         news_data = response.json().get('news', [])
@@ -30,25 +37,14 @@ def get_latest_news(api_key, query):
             return f"{news_data[0]['title']}: {news_data[0]['description']}"
     return "No news available on this topic."
 
-# arXiv API for latest research
-def get_latest_research(query="AI"):
-    url = f"http://export.arxiv.org/api/query?search_query={query}&start=0&max_results=1"
-    response = requests.get(url)
-    if response.status_code == 200:
-        return response.text
-    return "No research information available."
-
 # Function to call the Hugging Face model API
-def get_llama_response(prompt):
-    if not huggingface_api_key:
+def get_ai_response(api_key, model_endpoint, question):
+    if not api_key:
         return "Hugging Face API key is missing."
-    headers = {
-        "Authorization": f"Bearer {huggingface_api_key}",
-        "Content-Type": "application/json",
-    }
-    data = {"inputs": prompt}
+    headers = {"Authorization": f"Bearer {api_key}"}
+    data = {"inputs": question}
     try:
-        response = requests.post(huggingface_model_endpoint, headers=headers, json=data)
+        response = requests.post(model_endpoint, headers=headers, json=data)
         response.raise_for_status()  # Will raise an HTTPError for bad responses
         response_data = response.json()
         # Handle model output
@@ -70,15 +66,15 @@ if st.button("Get Response"):
         if "space" in user_input.lower():
             info = get_space_info(nasa_api_key)
         elif any(keyword in user_input.lower() for keyword in ["ai", "agi", "asi"]):
-            info = get_latest_news(currents_api_key, "AI")
+            info = get_latest_research(news_api_key)
         elif "research" in user_input.lower():
-            info = get_latest_research("AI")
+            info = get_latest_research(news_api_key)
         else:
             info = "Sorry, I couldn't find information on that topic."
 
         # Generate a detailed response using the hosted LLaMA model
         prompt = f"{user_input} {info}"
-        response = get_llama_response(prompt)
+        response = get_ai_response(huggingface_api_key, huggingface_model_endpoint, prompt)
 
         st.write(response)
     else:
