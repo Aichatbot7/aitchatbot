@@ -52,7 +52,7 @@ def get_llama_response(prompt):
         response.raise_for_status()  # Will raise an HTTPError for bad responses
         response_data = response.json()
         # Assuming the response format includes "generated_text"
-        if isinstance(response_data, list) and "generated_text" in response_data[0]:
+        if isinstance(response_data, list) and len(response_data) > 0 and "generated_text" in response_data[0]:
             return response_data[0]["generated_text"]
         return "Unexpected response format."
     except requests.exceptions.RequestException as e:
